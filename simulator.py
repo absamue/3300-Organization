@@ -79,6 +79,13 @@ cs[13][NEXT] = 4
 cs[14][NEXT] = 0
 cs[15][NEXT] = 0
 
+#hex to int
+def hextoint(val):
+    ret = int(val, 16)
+    if ret >= 2048:
+        ret -= 4096
+    return ret
+
 #file input
 def read():
     i = 0
@@ -102,23 +109,24 @@ def mem_print():
 
 #process mem
 def process():
-    #get 11 bit instruction as binary string
-    instruction = str(bin(int(str(mem[0]), 16))[2:].zfill(12))
+    for step in range(11):
+        #get 11 bit instruction as binary string
+        instruction = str(bin(int(str(mem[step]), 16))[2:].zfill(12))
     
-    #get address as int
-    addr = int(instruction[-9:], 2)
+        #get address as int
+        addr = int(instruction[-9:], 2)
     
-    #get opcode as int and execute it
-    opcode = int(instruction[:3], 2)
-    execute(opcode,addr)
+        #get opcode as int and execute it
+        opcode = int(instruction[:3], 2)
+        execute(opcode,addr)
 
 #do opcode instruction
 def execute(opcode, addr):
     options = {
         0 : load,
-#        1 : add,
-#        2 : store,
-#        3 : brz,
+        1 : add,
+        2 : store,
+        3 : brz,
 #        4 : sub,
 #        5 : jsub,
 #        6 : jmpi,
@@ -127,12 +135,67 @@ def execute(opcode, addr):
     options[opcode](addr)
 
 def load(addr):
-    global PC 
+    global PC, IR, MAR, MDR, ACC 
+    #T1
+    MAR = int(PC)
+    #T2
+    MDR = mem[MAR]
     PC += 1
-    global ACC 
-    ACC = int(mem[addr], 16)
+    #T3
+    IR = MDR
+    #T4br table
+    #T5 
+    MAR = addr
+    #T6
+    MDR = mem[MAR]
+    #T7
+    ACC = hextoint(MDR)
+    print("load success")
 
+def add(addr):
+    global PC, IR, MAR, MDR, ACC 
+    #T1
+    MAR = int(PC)
+    #T2
+    MDR = mem[MAR]
+    PC += 1
+    #T3
+    IR = MDR
+    #T4 br table
+    #T5
+    MAR = addr
+    #T6
+    MDR = mem[MAR]
+    #T7
+    TMP = hextoint(MDR) + ACC
+    #T8
+    ACC = TMP
+    print("add success")
 
+def store(addr):
+    global PC, IR, MAR, MDR, ACC 
+    #T1
+    MAR = int(PC)
+    #T2
+    MDR = mem[MAR]
+    PC += 1
+    #T3
+    IR = MDR
+    #T4 br table
+    #T5
+    MAR = addr
+    #T6
+    MDR = ACC
+    #T7
+    mem[MAR] = MDR
+    print("store success")
+
+def brz(addr):
+    global PC, IR, MAR, MDR, ACC 
+    if ACC == 0:
+        PC = addr
+    print("brz success")
+        
 #main
 read()
 mem_print()

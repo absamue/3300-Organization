@@ -32,6 +32,7 @@ ACC = 0
 TMP = 0
 CSAR = 0
 BUS = 0
+halt = False
 
 #generate cs
 cs[0][MAR_IN] = 1
@@ -109,9 +110,10 @@ def mem_print():
 
 #process mem
 def process():
-    for step in range(11):
+    global PC, halt
+    while halt != True:
         #get 11 bit instruction as binary string
-        instruction = str(bin(int(str(mem[step]), 16))[2:].zfill(12))
+        instruction = str(bin(int(str(mem[PC]), 16))[2:].zfill(12))
     
         #get address as int
         addr = int(instruction[-9:], 2)
@@ -130,8 +132,9 @@ def execute(opcode, addr):
 #        4 : sub,
 #        5 : jsub,
 #        6 : jmpi,
-#        6 : halt,
+        7 : halt,
     }
+    print(opcode, addr)
     options[opcode](addr)
 
 def load(addr):
@@ -192,11 +195,33 @@ def store(addr):
 
 def brz(addr):
     global PC, IR, MAR, MDR, ACC 
+    #T1
+    MAR = int(PC)
+    #T2
+    MDR = mem[MAR]
+    PC += 1
+    #T3
+    IR = MDR
+    #T4 br table
     if ACC == 0:
         PC = addr
     print("brz success")
+
+def halt(addr):
+    global PC, IR, MAR, MDR, ACC, halt
+    #T1
+    MAR = int(PC)
+    #T2
+    MDR = mem[MAR]
+    PC += 1
+    #T3
+    IR = MDR
+    #T4 br table
+    halt = True
+
         
 #main
 read()
 mem_print()
 process()
+mem_print()

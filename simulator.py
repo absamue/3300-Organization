@@ -31,6 +31,7 @@ MDR = 0
 ACC = 0
 TMP = 0
 CSAR = 0
+BUS = 0
 
 #generate cs
 cs[0][MAR_IN] = 1
@@ -86,14 +87,53 @@ def read():
         for word in line.split():
             if word != "-1":
                 mem[i] = word
-            i+=1
+                i+=1
+
+#print memory contents
+def mem_print():
+    print("low memory:", end='')
+    for x in range(20):
+        cur = " " + str(mem[x])
+        print(cur.rjust(5), end='')
+        if x==9:
+            print("")
+            print("           ", end='')
+    print("")
+
+#process mem
+def process():
+    #get 11 bit instruction as binary string
+    instruction = str(bin(int(str(mem[0]), 16))[2:].zfill(12))
+    
+    #get address as int
+    addr = int(instruction[-9:], 2)
+    
+    #get opcode as int and execute it
+    opcode = int(instruction[:3], 2)
+    execute(opcode,addr)
+
+#do opcode instruction
+def execute(opcode, addr):
+    options = {
+        0 : load,
+#        1 : add,
+#        2 : store,
+#        3 : brz,
+#        4 : sub,
+#        5 : jsub,
+#        6 : jmpi,
+#        6 : halt,
+    }
+    options[opcode](addr)
+
+def load(addr):
+    global PC 
+    PC += 1
+    global ACC 
+    ACC = int(mem[addr], 16)
+
 
 #main
 read()
-
-print("low memory:", end='')
-for x in range(20):
-    print(" ", mem[x], end='')
-    if x==9:
-        print("")
-        print("         ", end='')
+mem_print()
+process()

@@ -32,7 +32,6 @@ MDR = 0
 ACC = 0
 TMP = 0
 CSAR = 0
-BUS = 0
 CYCLE = 1
 halt = False
 
@@ -78,7 +77,7 @@ cs[9][NEXT] = 10
 cs[10][NEXT] = 11
 cs[11][NEXT] = 0
 cs[12][NEXT] = 13
-cs[13][NEXT] = 4
+cs[13][NEXT] = 14
 cs[14][NEXT] = 0
 cs[15][NEXT] = 0
 
@@ -156,100 +155,165 @@ def execute(opcode, addr):
     options[opcode](addr)
 
 def load(addr):
-    global PC, IR, MAR, MDR, ACC 
+    global PC, IR, MAR, MDR, ACC, CSAR 
     #T1
-    cycle_print(addr)
+    cycle_print()
     MAR = int(PC)
+    CSAR = cs[CSAR][NEXT] 
     #T2
-    cycle_print(addr)
+    cycle_print()
     MDR = mem[MAR]
     PC += 1
+    CSAR = cs[CSAR][NEXT] 
     #T3
-    cycle_print(addr)
+    cycle_print()
     IR = MDR
+    CSAR = cs[CSAR][NEXT] 
     #T4br table
+    cycle_print()
+    CSAR = 5 
     #T5 
-    cycle_print(addr)
+    cycle_print()
     MAR = addr
+    CSAR = cs[CSAR][NEXT] 
     #T6
-    cycle_print(addr)
+    cycle_print()
     MDR = mem[MAR]
+    CSAR = cs[CSAR][NEXT] 
     #T7
-    cycle_print(addr)
+    cycle_print()
     ACC = hextoint(MDR)
+    CSAR = cs[CSAR][NEXT] 
+    
+    print("    +---+---+---+---+---+---+/----//---------------------//---------------/")
 
 def add(addr):
-    global PC, IR, MAR, MDR, ACC 
+    global PC, IR, MAR, MDR, ACC, CSAR,TMP
     #T1
+    cycle_print()
     MAR = int(PC)
-    cycle_print(addr)
+    CSAR = cs[CSAR][NEXT] 
     #T2
+    cycle_print()
     MDR = mem[MAR]
     PC += 1
+    CSAR = cs[CSAR][NEXT] 
     #T3
+    cycle_print()
     IR = MDR
+    CSAR = cs[CSAR][NEXT] 
     #T4 br table
+    cycle_print()
+    CSAR = 8
     #T5
+    cycle_print()
     MAR = addr
+    CSAR = cs[CSAR][NEXT] 
     #T6
+    cycle_print()
     MDR = mem[MAR]
+    CSAR = cs[CSAR][NEXT] 
     #T7
+    cycle_print()
     TMP = hextoint(MDR) + ACC
+    CSAR = cs[CSAR][NEXT] 
     #T8
+    cycle_print()
     ACC = TMP
+    CSAR = cs[CSAR][NEXT] 
+    print("    +---+---+---+---+---+---+/----//---------------------//---------------/")
 
 def store(addr):
-    global PC, IR, MAR, MDR, ACC 
+    global PC, IR, MAR, MDR, ACC, CSAR
     #T1
+    cycle_print()
     MAR = int(PC)
+    CSAR = cs[CSAR][NEXT] 
     #T2
+    cycle_print()
     MDR = mem[MAR]
     PC += 1
+    CSAR = cs[CSAR][NEXT] 
     #T3
+    cycle_print()
     IR = MDR
+    CSAR = cs[CSAR][NEXT] 
     #T4 br table
+    cycle_print()
+    CSAR = 12
     #T5
+    cycle_print()
     MAR = addr
+    CSAR = cs[CSAR][NEXT] 
     #T6
+    cycle_print()
     MDR = ACC
+    CSAR = cs[CSAR][NEXT] 
     #T7
+    cycle_print()
     mem[MAR] = MDR
+    CSAR = cs[CSAR][NEXT] 
+    print("    +---+---+---+---+---+---+/----//---------------------//---------------/")
 
 def brz(addr):
-    global PC, IR, MAR, MDR, ACC 
+    global PC, IR, MAR, MDR, ACC, CSAR
     #T1
+    cycle_print()
     MAR = int(PC)
+    CSAR = cs[CSAR][NEXT] 
     #T2
+    cycle_print()
     MDR = mem[MAR]
     PC += 1
+    CSAR = cs[CSAR][NEXT] 
     #T3
+    cycle_print()
     IR = MDR
+    CSAR = cs[CSAR][NEXT] 
     #T4 br table
+    cycle_print()
+    CSAR = 15 
+    #T5
+    cycle_print()
     if ACC == 0:
         PC = addr
+        CSAR = 1
+        cycle_print()
+    print("    +---+---+---+---+---+---+/----//---------------------//---------------/")
 
 def halt(addr):
-    global PC, IR, MAR, MDR, ACC, halt
+    global PC, IR, MAR, MDR, ACC, halt, CSAR
     #T1
+    cycle_print()
     MAR = int(PC)
+    CSAR = cs[CSAR][NEXT] 
     #T2
+    cycle_print()
     MDR = mem[MAR]
     PC += 1
+    CSAR = cs[CSAR][NEXT] 
     #T3
+    cycle_print()
     IR = MDR
+    CSAR = cs[CSAR][NEXT] 
     #T4 br table
+    cycle_print()
     halt = True
+    CSAR = 0
+    print("    +---+---+---+---+---+---+/----//---------------------//---------------/")
 
-def cycle_print(addr):
-    global PC, IR, MAR, MDR, ACC, halt, CYCLE
+def cycle_print():
+    global PC, IR, MAR, MDR, ACC, halt, CYCLE, TMP
 
-    print ("%4s:%3s %3s %3s %3s %3s %3s %5s  " 
-           % (CYCLE, PC, IR, MAR, MDR, ACC, TMP, CSAR), end='')
+    print ("%4s:%3s %3s %3s %3s %3s %3s " 
+           % (CYCLE, PC, IR, MAR, MDR, ACC, TMP), end='')
+    print("%5s  " %(format(CSAR, '01x')), end='')
     CYCLE += 1
     for i in range(16):
-        print (cs[addr][i], end='')
-    print ("|%2s|%1s  " % (format(cs[addr][NEXT], '02x'), cs[addr][OR_ADDR])
-           , CSIGNALS[addr])
+        print (cs[CSAR][i], end='')
+    print ("|%2s|%1s  " % (format(cs[CSAR][NEXT], '02x'), cs[CSAR][OR_ADDR])
+           , CSIGNALS[CSAR])
+    
 
 #main
 read()
@@ -257,4 +321,5 @@ mem_print()
 print("cycle  PC  IR MAR MDR ACC TMP  CSAR          CSIR            cntl signals")
 print("    +---+---+---+---+---+---+/----//---------------------//---------------/")
 process()
+print("")
 mem_print()

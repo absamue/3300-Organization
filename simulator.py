@@ -147,9 +147,9 @@ def execute(opcode, addr):
         1 : add,
         2 : store,
         3 : brz,
-#        4 : sub,
-#        5 : jsub,
-#        6 : jmpi,
+        4 : sub,
+        5 : jsub,
+        6 : jmpi,
         7 : halt,
     }
     options[opcode](addr)
@@ -182,10 +182,78 @@ def load(addr):
     CSAR = cs[CSAR][NEXT] 
     #T7
     cycle_print()
-    ACC = hextoint(MDR)
+    ACC = hextoint(str(MDR))
     CSAR = cs[CSAR][NEXT] 
     
     print("    +---+---+---+---+---+---+/----//---------------------//---------------/")
+
+def jmpi(addr):
+    global PC, IR, MAR, MDR, ACC, CSAR 
+    #T1
+    cycle_print()
+    MAR = int(PC)
+    CSAR = cs[CSAR][NEXT] 
+    #T2
+    cycle_print()
+    MDR = mem[MAR]
+    PC += 1
+    CSAR = cs[CSAR][NEXT] 
+    #T3
+    cycle_print()
+    IR = MDR
+    CSAR = cs[CSAR][NEXT] 
+    #T4br table
+    #T5 
+    cycle_print()
+    MAR = addr
+    CSAR = cs[CSAR][NEXT] 
+    #T6
+    cycle_print()
+    MDR = mem[MAR]
+    CSAR = cs[CSAR][NEXT] 
+    #T7
+    cycle_print()
+    PC = hextoint(str(MDR))
+    CSAR = cs[CSAR][NEXT]
+
+    print("    +---+---+---+---+---+---+/----//---------------------//---------------/")
+
+def jsub(addr):
+    global PC, IR, MAR, MDR, ACC, CSAR 
+    #T1
+    cycle_print()
+    MAR = int(PC)
+    CSAR = cs[CSAR][NEXT] 
+    #T2
+    cycle_print()
+    MDR = mem[MAR]
+    PC += 1
+    CSAR = cs[CSAR][NEXT] 
+    #T3
+    cycle_print()
+    IR = MDR
+    CSAR = cs[CSAR][NEXT] 
+    #T4br table
+    CSAR = 15
+    #T5
+    cycle_print()
+    PC = addr + 1
+    CSAR = cs[CSAR][NEXT]
+    #T6
+    cycle_print()
+    MAR = addr
+    CSAR = cs[CSAR][NEXT] 
+    #T6
+    cycle_print()
+    MDR = PC
+    CSAR = cs[CSAR][NEXT] 
+    #T7
+    cycle_print()
+    mem[MAR] = MDR
+    CSAR = cs[CSAR][NEXT] 
+    print("    +---+---+---+---+---+---+/----//---------------------//---------------/")
+
+
 
 def add(addr):
     global PC, IR, MAR, MDR, ACC, CSAR,TMP
@@ -215,13 +283,50 @@ def add(addr):
     CSAR = cs[CSAR][NEXT] 
     #T7
     cycle_print()
-    TMP = hextoint(MDR) + ACC
+    TMP = hextoint(str(MDR)) + ACC
     CSAR = cs[CSAR][NEXT] 
     #T8
     cycle_print()
     ACC = TMP
     CSAR = cs[CSAR][NEXT] 
     print("    +---+---+---+---+---+---+/----//---------------------//---------------/")
+
+def sub(addr):
+    global PC, IR, MAR, MDR, ACC, CSAR,TMP
+    #T1
+    cycle_print()
+    MAR = int(PC)
+    CSAR = cs[CSAR][NEXT] 
+    #T2
+    cycle_print()
+    MDR = mem[MAR]
+    PC += 1
+    CSAR = cs[CSAR][NEXT] 
+    #T3
+    cycle_print()
+    IR = MDR
+    CSAR = cs[CSAR][NEXT] 
+    #T4 br table
+    cycle_print()
+    CSAR = 8
+    #T5
+    cycle_print()
+    MAR = addr
+    CSAR = cs[CSAR][NEXT] 
+    #T6
+    cycle_print()
+    MDR = mem[MAR]
+    CSAR = cs[CSAR][NEXT] 
+    #T7
+    cycle_print()
+    TMP = ACC - hextoint(str(MDR))
+    CSAR = cs[CSAR][NEXT] 
+    #T8
+    cycle_print()
+    ACC = TMP
+    CSAR = cs[CSAR][NEXT] 
+    print("    +---+---+---+---+---+---+/----//---------------------//---------------/")
+
 
 def store(addr):
     global PC, IR, MAR, MDR, ACC, CSAR

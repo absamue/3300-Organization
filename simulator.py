@@ -21,10 +21,10 @@ NEXT = 16
 OR_ADDR = 17
 
 #declarations
-cs = [[0 for x in range(32)] for y in range(22)]
+cs = [[0 for x in range(22)] for y in range(32)]
 mem = [0 for x in range(512)]
-CSIR = [0 for x in range(22)]
-CSIGNALS = [0 for x in range(22)]
+CSIR = [0 for x in range(8)]
+CSIGNALS = [0 for x in range(32)]
 PC = 0 
 MAR = 0
 IR = 0
@@ -63,6 +63,42 @@ cs[13][ACC_OUT] = 1
 cs[13][MDR_IN] = 1
 cs[14][WRITE] = 1
 cs[15][OR_ADDR] = 1
+#extra instructions
+#sub
+cs[16][MAR_IN] = 1
+cs[16][IR_OUT] = 1
+cs[16][NEXT] = 17
+cs[17][READ] = 1
+cs[17][NEXT] = 18
+cs[18][ACC_OUT] = 1
+cs[18][ALU_SUB] = 1
+cs[18][NEXT] = 19
+cs[19][ACC_IN] = 1
+cs[19][TMP_OUT] = 1
+cs[19][NEXT] = 0
+#jsub
+cs[20][MAR_IN] = 1
+cs[20][IR_OUT] = 1
+cs[20][NEXT] = 21
+cs[21][MDR_IN] = 1
+cs[21][PC_OUT] = 1
+cs[21][NEXT] = 22
+cs[22][WRITE] = 1
+cs[22][NEXT] = 23
+cs[23][PC_IN] = 1
+cs[23][IR_OUT] = 1
+cs[23][NEXT] = 24
+cs[24][PC_INCR] = 1
+cs[24][NEXT] = 0
+#jmpi
+cs[25][MAR_IN] = 1
+cs[25][IR_OUT] = 1
+cs[25][NEXT] = 26
+cs[26][READ] = 1
+cs[26][NEXT] = 27
+cs[27][PC_IN] = 1
+cs[27][MDR_OUT] = 1
+cs[27][NEXT] = 0
 
 #next addr
 cs[0][NEXT] = 2
@@ -81,6 +117,7 @@ cs[13][NEXT] = 14
 cs[14][NEXT] = 0
 cs[15][NEXT] = 0
 
+#control signal names
 CSIGNALS[0] = "MAR_in PC_out"
 CSIGNALS[1] = "PC_in IR_out"
 CSIGNALS[2] = "pc_incr read"
@@ -97,6 +134,27 @@ CSIGNALS[12] = "MAR_in IR_out"
 CSIGNALS[13] = "MDR_in ACC_out"
 CSIGNALS[14] = "write"
 CSIGNALS[15] = "or_addr"
+CSIGNALS[16] = "MAR_in IR_out"
+CSIGNALS[17] = "read"
+CSIGNALS[18] = "ACC_out ALU_sub"
+CSIGNALS[19] = "ACC_in TMP_out"
+CSIGNALS[20] = "MAR_in IR_out"
+CSIGNALS[21] = "MDR_in PC_out"
+CSIGNALS[22] = "write"
+CSIGNALS[23] = "PC_in IR_out"
+CSIGNALS[24] = "PC_incr"
+CSIGNALS[25] = "MAR_in IR_out"
+CSIGNALS[26] = "read"
+CSIGNALS[27] = "PC_in MDR_out"
+
+#CSIR
+CSIR[0] = 5
+CSIR[1] = 8
+CSIR[2] = 12 
+CSIR[3] = 15
+CSIR[4] = 16 
+CSIR[5] = 20
+CSIR[6] = 25
 
 #hex to int
 def hextoint(val):
@@ -171,7 +229,7 @@ def load(addr):
     CSAR = cs[CSAR][NEXT] 
     #T4br table
     cycle_print()
-    CSAR = 5 
+    CSAR = CSIR[0]
     #T5 
     cycle_print()
     MAR = addr
@@ -203,6 +261,8 @@ def jmpi(addr):
     IR = MDR
     CSAR = cs[CSAR][NEXT] 
     #T4br table
+    cycle_print()
+    CSAR = CSIR[6]
     #T5 
     cycle_print()
     MAR = addr
@@ -234,27 +294,25 @@ def jsub(addr):
     IR = MDR
     CSAR = cs[CSAR][NEXT] 
     #T4br table
-    CSAR = 15
+    cycle_print()
+    CSAR = CSIR[5]
     #T5
-#    cycle_print()
-#    PC = addr + 1
-#    CSAR = cs[CSAR][NEXT]
-#    #T6
-#    cycle_print()
-#    MAR = addr
-#    CSAR = cs[CSAR][NEXT] 
-#    #T6
-#    cycle_print()
-#    MDR = PC
-#    CSAR = cs[CSAR][NEXT] 
-#    #T7
-#    cycle_print()
-#    mem[MAR] = format(MDR, 'x')
-#    CSAR = cs[CSAR][NEXT] 
+    cycle_print()
     MAR = addr
+    CSAR = cs[CSAR][NEXT]
+    
+    cycle_print()
     MDR = PC
+    CSAR = cs[CSAR][NEXT]
+    
+    cycle_print()
     mem[MAR] = format(MDR, 'x')
+    CSAR = cs[CSAR][NEXT]
+    
+    cycle_print()
     PC = addr + 1
+    CSAR = cs[CSAR][NEXT]
+    cycle_print()
     print("    +---+---+---+---+---+---+/----//---------------------//---------------/")
 
 
@@ -276,7 +334,7 @@ def add(addr):
     CSAR = cs[CSAR][NEXT] 
     #T4 br table
     cycle_print()
-    CSAR = 8
+    CSAR = CSIR[1]
     #T5
     cycle_print()
     MAR = addr
@@ -312,7 +370,7 @@ def sub(addr):
     CSAR = cs[CSAR][NEXT] 
     #T4 br table
     cycle_print()
-    CSAR = 8
+    CSAR = CSIR[4]
     #T5
     cycle_print()
     MAR = addr
@@ -323,7 +381,7 @@ def sub(addr):
     CSAR = cs[CSAR][NEXT] 
     #T7
     cycle_print()
-    TMP = ACC - hextoint(str(MDR))
+    TMP = int(ACC) - hextoint(str(MDR))
     CSAR = cs[CSAR][NEXT] 
     #T8
     cycle_print()
@@ -349,7 +407,7 @@ def store(addr):
     CSAR = cs[CSAR][NEXT] 
     #T4 br table
     cycle_print()
-    CSAR = 12
+    CSAR = CSIR[2]
     #T5
     cycle_print()
     MAR = addr
@@ -360,7 +418,7 @@ def store(addr):
     CSAR = cs[CSAR][NEXT] 
     #T7
     cycle_print()
-    mem[MAR] = format(MDR & 0xfff, 'x')
+    mem[MAR] = format(int(MDR) & 0xfff, 'x')
     CSAR = cs[CSAR][NEXT] 
     print("    +---+---+---+---+---+---+/----//---------------------//---------------/")
 
@@ -381,7 +439,7 @@ def brz(addr):
     CSAR = cs[CSAR][NEXT] 
     #T4 br table
     cycle_print()
-    CSAR = 15 
+    CSAR = CSIR[3]
     #T5
     cycle_print()
     if ACC == 0:
@@ -411,11 +469,20 @@ def halt(addr):
     CSAR = 0
     print("    +---+---+---+---+---+---+/----//---------------------//---------------/")
 
+def inttohex(val):
+    if(val<0):
+        return format(val & 0xfff, 'x')
+    else:
+        return val
+
 def cycle_print():
     global PC, IR, MAR, MDR, ACC, halt, CYCLE, TMP
-
+    acc = inttohex(ACC)
+    tmp = inttohex(TMP)
+    mar = inttohex(MAR)
+    mdr = inttohex(MDR)
     print ("%4s:%3s %3s %3s %3s %3s %3s " 
-           % (CYCLE, PC, IR, MAR, MDR, ACC, TMP), end='')
+           % (CYCLE, PC, IR, mar, mdr, acc, tmp), end='')
     print("%5s  " %(format(CSAR, '01x')), end='')
     CYCLE += 1
     for i in range(16):

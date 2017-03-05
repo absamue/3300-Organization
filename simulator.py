@@ -236,21 +236,25 @@ def jsub(addr):
     #T4br table
     CSAR = 15
     #T5
-    cycle_print()
-    PC = addr + 1
-    CSAR = cs[CSAR][NEXT]
-    #T6
-    cycle_print()
+#    cycle_print()
+#    PC = addr + 1
+#    CSAR = cs[CSAR][NEXT]
+#    #T6
+#    cycle_print()
+#    MAR = addr
+#    CSAR = cs[CSAR][NEXT] 
+#    #T6
+#    cycle_print()
+#    MDR = PC
+#    CSAR = cs[CSAR][NEXT] 
+#    #T7
+#    cycle_print()
+#    mem[MAR] = format(MDR, 'x')
+#    CSAR = cs[CSAR][NEXT] 
     MAR = addr
-    CSAR = cs[CSAR][NEXT] 
-    #T6
-    cycle_print()
     MDR = PC
-    CSAR = cs[CSAR][NEXT] 
-    #T7
-    cycle_print()
-    mem[MAR] = MDR
-    CSAR = cs[CSAR][NEXT] 
+    mem[MAR] = format(MDR, 'x')
+    PC = addr + 1
     print("    +---+---+---+---+---+---+/----//---------------------//---------------/")
 
 
@@ -356,7 +360,7 @@ def store(addr):
     CSAR = cs[CSAR][NEXT] 
     #T7
     cycle_print()
-    mem[MAR] = MDR
+    mem[MAR] = format(MDR & 0xfff, 'x')
     CSAR = cs[CSAR][NEXT] 
     print("    +---+---+---+---+---+---+/----//---------------------//---------------/")
 

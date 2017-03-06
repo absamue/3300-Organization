@@ -1,3 +1,17 @@
+'''
+CPSC 3300 - S17
+Project 1 - Microprogrammed processor simulator
+
+This project simulates a microprogrammed processor. It reads in
+instructions in hex format from the file microsim.txt, and then simulates
+running the given commands.
+
+To execute this file on the Clemson lab machines, use the command:
+'python simulator.py'
+
+The program will then simulate the instructions, and print the values of
+the CPU registers and the microcode instructions to stdout.
+'''
 from __future__ import print_function
 
 #constants
@@ -38,31 +52,46 @@ halt = False
 #generate cs
 cs[0][MAR_IN] = 1
 cs[0][PC_OUT] = 1
+cs[0][NEXT] = 2
 cs[1][IR_OUT] = 1
 cs[1][PC_IN] = 1
+cs[1][NEXT] = 0
 cs[2][PC_INCR] = 1
 cs[2][READ] = 1
+cs[2][NEXT] = 3
 cs[3][IR_IN] = 1
 cs[3][MDR_OUT] = 1
+cs[3][NEXT] = 4
 cs[4][BRTABLE] = 1
 cs[5][IR_OUT] = 1
 cs[5][MAR_IN] = 1
+cs[5][NEXT] = 6
 cs[6][READ] = 1
+cs[6][NEXT] = 7
 cs[7][ACC_IN] = 1
 cs[7][PC_IN] = 1
+cs[7][NEXT] = 0
 cs[8][IR_OUT] = 1
 cs[8][MAR_IN] = 1
+cs[8][NEXT] = 9
 cs[9][READ] = 1
+cs[9][NEXT] = 10
 cs[10][ACC_OUT] = 1
 cs[10][ALU_ADD] = 1
+cs[10][NEXT] = 11
 cs[11][ACC_IN] = 1
 cs[11][TMP_OUT] = 1
+cs[11][NEXT] = 0
 cs[12][IR_OUT] = 1
 cs[12][MAR_IN] = 1
+cs[12][NEXT] = 13
 cs[13][ACC_OUT] = 1
 cs[13][MDR_IN] = 1
+cs[13][NEXT] = 14
 cs[14][WRITE] = 1
+cs[14][NEXT] = 0
 cs[15][OR_ADDR] = 1
+cs[15][NEXT] = 0
 #extra instructions
 #sub
 cs[16][MAR_IN] = 1
@@ -100,23 +129,6 @@ cs[27][PC_IN] = 1
 cs[27][MDR_OUT] = 1
 cs[27][NEXT] = 0
 
-#next addr
-cs[0][NEXT] = 2
-cs[1][NEXT] = 0
-cs[2][NEXT] = 3
-cs[3][NEXT] = 4
-cs[5][NEXT] = 6
-cs[6][NEXT] = 7
-cs[7][NEXT] = 0
-cs[8][NEXT] = 9
-cs[9][NEXT] = 10
-cs[10][NEXT] = 11
-cs[11][NEXT] = 0
-cs[12][NEXT] = 13
-cs[13][NEXT] = 14
-cs[14][NEXT] = 0
-cs[15][NEXT] = 0
-
 #control signal names
 CSIGNALS[0] = "MAR_in PC_out"
 CSIGNALS[1] = "PC_in IR_out"
@@ -147,7 +159,7 @@ CSIGNALS[25] = "MAR_in IR_out"
 CSIGNALS[26] = "read"
 CSIGNALS[27] = "PC_in MDR_out"
 
-#CSIR
+#CSIR used for brtable
 CSIR[0] = 5
 CSIR[1] = 8
 CSIR[2] = 12 
@@ -158,15 +170,18 @@ CSIR[6] = 25
 
 #hex to int
 def hextoint(val):
+    #converto to int
     ret = int(val, 16)
+    #check if negative
     if ret >= 2048:
         ret -= 4096
     return ret
 
 #file input
+#place each item in file into mem[i] until we end, excluding -1
 def read():
     i = 0
-    f = open("microism.txt", "r")
+    f = open("microsim.txt", "r")
     for line in f:
         for word in line.split():
             if word != "-1":
@@ -212,103 +227,106 @@ def execute(opcode, addr):
     }
     options[opcode](addr)
 
+#place contents of specified memory location into the ACC
 def load(addr):
     global PC, IR, MAR, MDR, ACC, CSAR 
-    #T1
+    #get address from PC
     cycle_print()
     MAR = int(PC)
     CSAR = cs[CSAR][NEXT] 
-    #T2
+    #get memory at address
     cycle_print()
     MDR = mem[MAR]
     PC += 1
     CSAR = cs[CSAR][NEXT] 
-    #T3
+    #place memory into instruction register
     cycle_print()
     IR = MDR
     CSAR = cs[CSAR][NEXT] 
-    #T4br table
+    #branch based on CSIR
     cycle_print()
     CSAR = CSIR[0]
-    #T5 
+    #set mar to address of instruction
     cycle_print()
     MAR = addr
     CSAR = cs[CSAR][NEXT] 
-    #T6
+    #set MDR to memory value
     cycle_print()
     MDR = mem[MAR]
     CSAR = cs[CSAR][NEXT] 
-    #T7
+    #place memory value into ACC as int
     cycle_print()
     ACC = hextoint(str(MDR))
     CSAR = cs[CSAR][NEXT] 
     
     print("    +---+---+---+---+---+---+/----//---------------------//---------------/")
 
+#place memory value into PC
 def jmpi(addr):
     global PC, IR, MAR, MDR, ACC, CSAR 
-    #T1
+    #get address from PC
     cycle_print()
     MAR = int(PC)
     CSAR = cs[CSAR][NEXT] 
-    #T2
+    #get memory at address
     cycle_print()
     MDR = mem[MAR]
     PC += 1
     CSAR = cs[CSAR][NEXT] 
-    #T3
+    #place memory into instruction register
     cycle_print()
     IR = MDR
     CSAR = cs[CSAR][NEXT] 
-    #T4br table
+    #branch based on CSIR
     cycle_print()
     CSAR = CSIR[6]
-    #T5 
+    #place address from instruction into MAR
     cycle_print()
     MAR = addr
     CSAR = cs[CSAR][NEXT] 
-    #T6
+    #set MDR to memory value at address
     cycle_print()
     MDR = mem[MAR]
     CSAR = cs[CSAR][NEXT] 
-    #T7
+    #place MDR into PC
     cycle_print()
     PC = hextoint(str(MDR))
     CSAR = cs[CSAR][NEXT]
 
     print("    +---+---+---+---+---+---+/----//---------------------//---------------/")
 
+#save PC memory and update PC to new value
 def jsub(addr):
     global PC, IR, MAR, MDR, ACC, CSAR 
-    #T1
+    #get address from PC
     cycle_print()
     MAR = int(PC)
     CSAR = cs[CSAR][NEXT] 
-    #T2
+    #get memory at address
     cycle_print()
     MDR = mem[MAR]
     PC += 1
     CSAR = cs[CSAR][NEXT] 
-    #T3
+    #place memory into instruction register
     cycle_print()
     IR = MDR
     CSAR = cs[CSAR][NEXT] 
-    #T4br table
+    #branch based on CSIR
     cycle_print()
     CSAR = CSIR[5]
-    #T5
+    #place address from instruction into MAR
     cycle_print()
     MAR = addr
     CSAR = cs[CSAR][NEXT]
-    
+    #place PC into MDR
     cycle_print()
     MDR = PC
     CSAR = cs[CSAR][NEXT]
-    
+    #set mem[addr] as the saved PC
     cycle_print()
     mem[MAR] = format(MDR, 'x')
     CSAR = cs[CSAR][NEXT]
-    
+    #increment the PC
     cycle_print()
     PC = addr + 1
     CSAR = cs[CSAR][NEXT]
@@ -316,131 +334,133 @@ def jsub(addr):
     print("    +---+---+---+---+---+---+/----//---------------------//---------------/")
 
 
-
+#add contents of memory to the accumulator
 def add(addr):
     global PC, IR, MAR, MDR, ACC, CSAR,TMP
-    #T1
+    #get address from PC
     cycle_print()
     MAR = int(PC)
     CSAR = cs[CSAR][NEXT] 
-    #T2
+    #get memory at address
     cycle_print()
     MDR = mem[MAR]
     PC += 1
     CSAR = cs[CSAR][NEXT] 
-    #T3
+    #place memory into instruction register
     cycle_print()
     IR = MDR
     CSAR = cs[CSAR][NEXT] 
-    #T4 br table
+    #branch based on CSIR
     cycle_print()
     CSAR = CSIR[1]
-    #T5
+    #set MAR as address from instruction
     cycle_print()
     MAR = addr
     CSAR = cs[CSAR][NEXT] 
-    #T6
+    #set MDR as value from address
     cycle_print()
     MDR = mem[MAR]
     CSAR = cs[CSAR][NEXT] 
-    #T7
+    #do addition and place in TMP
     cycle_print()
     TMP = hextoint(str(MDR)) + ACC
     CSAR = cs[CSAR][NEXT] 
-    #T8
+    #place TMP's value back into ACC
     cycle_print()
     ACC = TMP
     CSAR = cs[CSAR][NEXT] 
     print("    +---+---+---+---+---+---+/----//---------------------//---------------/")
 
+#subtract the contents of memory from the accumulator
 def sub(addr):
     global PC, IR, MAR, MDR, ACC, CSAR,TMP
-    #T1
+    #get address from PC
     cycle_print()
     MAR = int(PC)
     CSAR = cs[CSAR][NEXT] 
-    #T2
+    #get memory at address
     cycle_print()
     MDR = mem[MAR]
     PC += 1
     CSAR = cs[CSAR][NEXT] 
-    #T3
+    #place memory into instruction register
     cycle_print()
     IR = MDR
     CSAR = cs[CSAR][NEXT] 
-    #T4 br table
+    #branch based on CSIR
     cycle_print()
     CSAR = CSIR[4]
-    #T5
+    #set MAR as address from instruction
     cycle_print()
     MAR = addr
     CSAR = cs[CSAR][NEXT] 
-    #T6
+    #set MDR as value from address
     cycle_print()
     MDR = mem[MAR]
     CSAR = cs[CSAR][NEXT] 
-    #T7
+    #do subtraction and place in TMP
     cycle_print()
     TMP = int(ACC) - hextoint(str(MDR))
     CSAR = cs[CSAR][NEXT] 
-    #T8
+    #place TMP's value back into ACC
     cycle_print()
     ACC = TMP
     CSAR = cs[CSAR][NEXT] 
     print("    +---+---+---+---+---+---+/----//---------------------//---------------/")
 
-
+#place value of accumulator into memory
 def store(addr):
     global PC, IR, MAR, MDR, ACC, CSAR
-    #T1
+    #get address from PC
     cycle_print()
     MAR = int(PC)
     CSAR = cs[CSAR][NEXT] 
-    #T2
+    #get memory at address
     cycle_print()
     MDR = mem[MAR]
     PC += 1
     CSAR = cs[CSAR][NEXT] 
-    #T3
+    #place memory into instruction register
     cycle_print()
     IR = MDR
     CSAR = cs[CSAR][NEXT] 
-    #T4 br table
+    #branch based on CSIR
     cycle_print()
     CSAR = CSIR[2]
-    #T5
+    #set MAR as address from instruction
     cycle_print()
     MAR = addr
     CSAR = cs[CSAR][NEXT] 
-    #T6
+    #set MDR to value of ACC
     cycle_print()
     MDR = ACC
     CSAR = cs[CSAR][NEXT] 
-    #T7
+    #write to memory in hex
     cycle_print()
     mem[MAR] = format(int(MDR) & 0xfff, 'x')
     CSAR = cs[CSAR][NEXT] 
     print("    +---+---+---+---+---+---+/----//---------------------//---------------/")
 
+#update PC if ACC==0
 def brz(addr):
     global PC, IR, MAR, MDR, ACC, CSAR
-    #T1
+    #get address from PC
     cycle_print()
     MAR = int(PC)
     CSAR = cs[CSAR][NEXT] 
-    #T2
+    #get memory at address
     cycle_print()
     MDR = mem[MAR]
     PC += 1
     CSAR = cs[CSAR][NEXT] 
-    #T3
+    #place memory into instruction register
     cycle_print()
     IR = MDR
     CSAR = cs[CSAR][NEXT] 
-    #T4 br table
+    #branch based on CSIR
     cycle_print()
     CSAR = CSIR[3]
-    #T5
+    #if ACC==0, set PC to given address
     cycle_print()
     if ACC == 0:
         PC = addr
@@ -448,33 +468,38 @@ def brz(addr):
         cycle_print()
     print("    +---+---+---+---+---+---+/----//---------------------//---------------/")
 
+#stop execution
 def halt(addr):
     global PC, IR, MAR, MDR, ACC, halt, CSAR
-    #T1
+    #get address from PC
     cycle_print()
     MAR = int(PC)
     CSAR = cs[CSAR][NEXT] 
-    #T2
+    #get memory at address
     cycle_print()
     MDR = mem[MAR]
     PC += 1
     CSAR = cs[CSAR][NEXT] 
-    #T3
+    #place memory into instruction register
     cycle_print()
     IR = MDR
     CSAR = cs[CSAR][NEXT] 
-    #T4 br table
+    #branch based on CSIR
     cycle_print()
     halt = True
     CSAR = 0
     print("    +---+---+---+---+---+---+/----//---------------------//---------------/")
 
+#convert a given int to hex
 def inttohex(val):
-    if(val<0):
-        return format(val & 0xfff, 'x')
-    else:
-        return val
+    if(type(val) is int):
+        if(val<0):
+            val = format(val & 0xfff, 'x')
+        else:
+            val = format(val, 'x')
+    return val
 
+#print out the registers, CSIR, and control signals
 def cycle_print():
     global PC, IR, MAR, MDR, ACC, halt, CYCLE, TMP
     acc = inttohex(ACC)

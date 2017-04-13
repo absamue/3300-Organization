@@ -4,13 +4,14 @@
 #include <stdlib.h>
 
 struct inst{
-	char regs[20];
-	char full_inst[20];
-	int level;
-	int orig_level;
+	char regs[20];			//extracted registers
+	char full_inst[20];	//full instruction read
+	int level;				//level of updated execution
+	int orig_level;		//original execution level
 
 }inst;
 
+//check if current instruction has any same regs as check
 int check(struct inst current, struct inst check){
 	char *cur;
 	cur = strtok(current.regs, "$");
@@ -26,7 +27,6 @@ int check(struct inst current, struct inst check){
 
 int main(int argc, char *argv[]){
 	
-//	bool rename = false;
 	int delay = 1;
 	char line[16];
 	char * cur;
@@ -53,6 +53,7 @@ int main(int argc, char *argv[]){
 	}
 	printf("load delay set to %d\n", delay);
 
+	//count how many instructions we need
 	int lines=0;
 	while(fgets(line, sizeof(line), fp)){
 		lines++;
@@ -68,7 +69,7 @@ int main(int argc, char *argv[]){
 		strcpy(instructions[level].full_inst, line);
 		instructions[level].level = level;  //please fix this ugly code later
 		instructions[level].orig_level = level;
-		//tokeninze line
+		//tokeninze line to get regs
 		cur = strtok(line, " ,()\n");
 		while(cur != NULL){
 			//check for register indicator, ignoring duplicates

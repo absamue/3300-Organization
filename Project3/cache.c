@@ -17,7 +17,7 @@ void state_print(struct processor p0, struct processor p1, char* bus){
 	if(p0.state == 'I')
 		printf("           I ----- ---- ----	");
 	else
-		printf("%s	%s	%c	%s	%d	%d	", p0.action, p0.addr, p0.state, p0.addr, p0.wrd1, p0.wrd2);
+		printf("%-5s %s  %c   %s    %d    %d    ", p0.action, p0.addr, p0.state, p0.addr, p0.wrd1, p0.wrd2);
 	printf("%s		", bus);
 	if(p1.state == 'I')
 		printf("I ----- ---- ----\n");
@@ -28,6 +28,15 @@ void state_print(struct processor p0, struct processor p1, char* bus){
 
 void process(struct processor active, struct processor snoop, char action, char addr[3], int proc){
 	
+	if(proc == 0){
+		active = p0;
+		snoop = p1;
+	}
+	else{
+		active = p1;
+		snoop = p0;
+	}
+	printf("%s || %s\n", active.addr, addr);	
 	//cache hit
 	if(strcmp(active.addr, addr) == 0){
 
@@ -59,6 +68,9 @@ void process(struct processor active, struct processor snoop, char action, char 
 					active.state = 'M';
 					BUS = "(none)";
 				}
+				break;
+			default:
+				printf("hit default\n");
 				break;
 		}
 	}
@@ -108,6 +120,10 @@ void process(struct processor active, struct processor snoop, char action, char 
 					printf("                                WBr\n");
 				}
 				break;
+			default:
+				printf("miss default\n");
+				break;
+
 		}
 
 	}
@@ -121,6 +137,9 @@ void process(struct processor active, struct processor snoop, char action, char 
 						break;
 					case 'N':
 						snoop.state = 'I';
+						break;
+					case 'E':
+						snoop.state = 'S';
 						break;
 				}
 				break;
@@ -147,6 +166,17 @@ void process(struct processor active, struct processor snoop, char action, char 
 		p1 = active;
 		p0 = snoop;
 	}
+
+	if(strstr(BUS, "RE") != NULL)
+		READ++;
+	if(strstr(BUS, "RD") != NULL)
+		READ++;
+	if(strstr(BUS, "INV") != NULL)
+		INV++;
+	if(strstr(BUS, "RIM") != NULL)
+		RIM++;
+	if(strstr(BUS, "WB") != NULL)
+		WB++;
 
 	state_print(p0, p1, BUS);
 }

@@ -6,7 +6,7 @@ struct processor{
 	char addr[3], *action;
 	int rhit, whit, rmiss, wmiss, wrd1, wrd2;
 	char state;
-
+	int active;
 };
 
 int mem[512];
@@ -15,16 +15,29 @@ char *BUS;
 struct processor *p0, *p1;
 
 void state_print(struct processor *p0, struct processor *p1, char* bus){
+	
+	//print info for p0
 	if(p0->state == 'I')
 		printf("           I ----- ---- ----	");
-	else
+	else if(p0->active == 1){
 		printf("%-5s %s  %c   %s    %d    %d    ", p0->action, p0->addr, p0->state, p0->addr, p0->wrd1, p0->wrd2);
-	printf("%s		", bus);
-	if(p1->state == 'I')
-		printf("I ----- ---- ----\n");
-	else
-		printf("%s	%s	%c	%s	%d	%d\n", p1->action, p1->addr, p1->state, p1->addr, p1->wrd1, p1->wrd2);
+	}
+	else{
+		printf("           %c   %s    %d    %d    ", p0->state, p0->addr, p0->wrd1, p0->wrd2);
 
+	}
+	//print bus action
+	printf("%s", bus);
+
+	//print info for p1
+	if(p1->state == 'I')
+		printf("	   	     I ----- ---- ----\n");
+	else if(p1->active == 1){
+		printf("	  %-5s %s  %c   %s    %d    %d\n", p1->action, p1->addr, p1->state, p1->addr, p1->wrd1, p1->wrd2);
+	}
+	else{
+		printf("		     %c   %s    %d    %d\n", p1->state, p1->addr, p1->wrd1, p1->wrd2);
+	}
 }
 
 void process(char action, char addr[3], int proc){
@@ -168,11 +181,15 @@ void process(char action, char addr[3], int proc){
 	strcpy(active->addr, addr);
 	if(proc == 0){
 		p0 = active;
+		p0->active = 1;
 		p1 = snoop;
+		p1->active = 0;
 	}
 	else{
 		p1 = active;
+		p1->active = 1;
 		p0 = snoop;
+		p0->active = 0;
 	}
 
 	if(strstr(BUS, "RE") != NULL)
@@ -211,6 +228,7 @@ int main(int argc, char *argv[]){
 	p0->state = p1->state = 'I';
 	p0->action = p1->action = "";
 	p0->rhit = p0->whit = p1->rhit = p1->whit = p0->rmiss = p1->rmiss = p0->wmiss = p1->wmiss = 0;
+	p0->active = p1->active = 0;
 
 	while(fgets(line, sizeof(line), fp)){
 		//p0->selected
@@ -240,6 +258,14 @@ int main(int argc, char *argv[]){
 	printf("write hits    %d    write hits    %d    WBs    %d\n", p0->whit, p1->whit, WB);
 	printf("write misses  %d    write misses  %d    INVs   %d\n", p0->wmiss, p1->wmiss, INV);
 	printf("---------------    ---------------    --------\n");
+
+	double p1hr = (double)(p1->rhit + p1->whit) / (double)(p1->rmiss + p1->wmiss + p1->rhit + p1->whit);
+	p1hr *= 100;
+	double p0hr = (double)(p0->rhit + p0->whit) / (double)(p0->rmiss + p0->wmiss + p0->rhit + p0->whit);
+	p0hr *= 100;
+	int total = READ + RIM + WB + INV;
+
+	printf("hit rate %2.1f%%     hit rate %2.1f%%     total  %d\n", p0hr, p1hr, total);
 
 	return 0;
 }

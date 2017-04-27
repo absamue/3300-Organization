@@ -3,15 +3,15 @@
 #include <stdlib.h>
 
 struct processor{
-	char addr[3], *action, paddr[3];
-	int rhit, whit, rmiss, wmiss, wrd1, wrd2;
-	char state, prev_state;
-	int active;
+	char addr[3], *action, paddr[3]; //addr in cache | read/write | addr for printing
+	int rhit, whit, rmiss, wmiss, wrd1, wrd2; //read/write hit/miss | values in cache line
+	char state, prev_state; //modified/shared/invalid
+	int active; //is this the processor we are using
 };
 
-int mem[512];
-int READ=0, RIM=0, WB=0, INV=0;
-char *BUS;
+int mem[512]; //512 words
+int READ=0, RIM=0, WB=0, INV=0; //count of bus actions
+char *BUS;	//bus state
 struct processor *p0, *p1;
 
 void state_print(struct processor *p0, struct processor *p1, char* bus){
@@ -44,10 +44,39 @@ int hextoint(char addr[3]){
 	return (int)strtol(addr, NULL, 16);
 }
 
+/* This colossal mess of a function implements the MSI cache
+ * state-transition represented by the following:
+ *
+ * Active processor:
+ *  cache hit, current state, action  |  new state / bus action
+  ----------------------------------+--------------------------
+     miss          I         read   |     S       READ
+     miss          I         write  |     M       RIM
+     miss          S         read   |     S       READ
+     miss          S         write  |     M       RIM
+     miss          M         read   |     S       WBr then READ
+     miss          M         write  |     M       WBr then RIM
+     hit           S         read   |     S       (none)
+     hit           S         write  |     M       INV
+     hit           M         read   |     M       (none)
+     hit           M         write  |     M       (none)
+
+	  Snooping Processor:
+	  address, current state, bus action  |  new state /  revised
+   match                              |              bus action
+  ------------------------------------+------------------------
+    no           x           x        | no change
+    yes          S           READ     |     S
+    yes          S           RIM      |     I
+    yes          S           INV      |     I
+    yes          M           READ     |     S          RD/WB
+    yes          M           RIM      |     I          RIM/WB
+*/
 void process(char action, char addr[3], int proc){
 	struct processor *active;
 	struct processor *snoop;
 
+	//determine active processor
 	if(proc == 0){
 		active = p0;
 		snoop = p1;
@@ -58,6 +87,7 @@ void process(char action, char addr[3], int proc){
 	}
 
 
+	//check for a cache hit
 	int hit, i;
 	int loc = hextoint(addr);
 	int memloc = loc/4; //referenced memory index
@@ -79,14 +109,19 @@ void process(char action, char addr[3], int proc){
 
 
 	//cache hit
+	//the following if-else follows the same structure as documented in the
+	//first case throughout
 	if(hit){
-
 		switch(active->state){
 			case 'S':
 				if(action == 'r'){
+					//set acion
 					active->action = "read";
+					//increase miss/hit count
 					active->rhit++;
+					//change state according to table
 					active->state = 'S';
+					//set bus according to table
 					BUS = "(none)";
 				}
 				else{
@@ -116,6 +151,7 @@ void process(char action, char addr[3], int proc){
 				break;
 		}
 	}
+	//cache miss
 	else{
 		switch(active->state){
 			case 'I':
@@ -174,6 +210,7 @@ void process(char action, char addr[3], int proc){
 		}
 	}
 
+	//update cache line values based on which one was referenced
 	if(memloc%2){
 		active->wrd2 = mem[memloc];
 		active->wrd1 = mem[memloc-1];
@@ -239,6 +276,8 @@ void process(char action, char addr[3], int proc){
 		}
 	}
 
+
+	//set the cache's current line value in addr
 	if(active->state != 'I'){
 		if(memloc%2){
 			sprintf(active->addr, "%x", loc-4);	
@@ -249,6 +288,8 @@ void process(char action, char addr[3], int proc){
 		strcpy(active->paddr, addr);
 	}
 
+	//set the pointer back to the global varible for each processor
+	//depending on which was active/snooping
 	if(proc == 0){
 		p0 = active;
 		p0->active = 1;
@@ -262,6 +303,7 @@ void process(char action, char addr[3], int proc){
 		p0->active = 0;
 	}
 
+	//increase the counters for the appropriate bus action
 	if(strstr(BUS, "RE") != NULL)
 		READ++;
 	if(strstr(BUS, "RD") != NULL)
@@ -273,6 +315,7 @@ void process(char action, char addr[3], int proc){
 	if(strstr(BUS, "WB") != NULL)
 		WB++;
 
+	//print details
 	state_print(p0, p1, BUS);
 }
 
@@ -294,6 +337,7 @@ int main(int argc, char *argv[]){
 	p0 = malloc(sizeof(struct processor));
 	p1 = malloc(sizeof(struct processor));
 
+	//set default values
 	p0->state = p1->state = 'I';
 	p0->prev_state = p1->prev_state = 'I';
 	p0->action = p1->action = "";
@@ -324,7 +368,7 @@ int main(int argc, char *argv[]){
 	}
 
 	
-
+	//print cache hit/miss counts and bus action information
 	printf("\nStats:\n");
 	printf("  processor 0        processor 1        bus\n");
 	printf("---------------    ---------------    --------\n");

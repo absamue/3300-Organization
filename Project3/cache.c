@@ -57,8 +57,6 @@ void process(char action, char addr[3], int proc){
 		snoop = p0;
 	}
 
-//	if(strstr(BUS, "INV") != NULL && active->state == 'I')
-//		active->state = active->prev_state;
 
 	int hit, i;
 	int loc = hextoint(addr);
@@ -90,9 +88,6 @@ void process(char action, char addr[3], int proc){
 					active->rhit++;
 					active->state = 'S';
 					BUS = "(none)";
-					if(memloc%2)
-						active->wrd2 = mem[memloc];
-					else active->wrd1 = mem[memloc];
 				}
 				else{
 					active->action = "write";
@@ -100,9 +95,6 @@ void process(char action, char addr[3], int proc){
 					active->state = 'M';
 					BUS = "INV";
 					mem[memloc]++;
-					if(memloc%2)
-						active->wrd2 = mem[memloc];
-					else active->wrd1 = mem[memloc];
 				}
 				break;
 			case 'M':
@@ -111,9 +103,6 @@ void process(char action, char addr[3], int proc){
 					active->rhit++;
 					active->state = 'M';
 					BUS = "(none)";
-					if(memloc%2)
-						active->wrd2 = mem[memloc];
-					else active->wrd1 = mem[memloc];
 				}
 				else{
 					active->action = "write";
@@ -121,9 +110,6 @@ void process(char action, char addr[3], int proc){
 					active->state = 'M';
 					BUS = "(none)";
 					mem[memloc]++;
-					if(memloc%2)
-						active->wrd2 = mem[memloc];
-					else active->wrd1 = mem[memloc];
 				}
 				break;
 			default:
@@ -138,9 +124,6 @@ void process(char action, char addr[3], int proc){
 					active->rmiss++;
 					active->state = 'S';
 					BUS = "READ";
-					if(memloc%2)
-						active->wrd2 = mem[memloc];
-					else active->wrd1 = mem[memloc];
 				}
 				else{
 					active->action = "write";
@@ -148,9 +131,6 @@ void process(char action, char addr[3], int proc){
 					active->state = 'M';
 					BUS = "RIM";
 					mem[memloc]++;
-					if(memloc%2)
-						active->wrd2 = mem[memloc];
-					else active->wrd1 = mem[memloc];
 				}
 				break;
 			case 'S':
@@ -159,9 +139,6 @@ void process(char action, char addr[3], int proc){
 					active->rmiss++;
 					active->state = 'S';
 					BUS = "READ";
-					if(memloc%2)
-						active->wrd2 = mem[memloc];
-					else active->wrd1 = mem[memloc];
 				}
 				else{
 					active->action = "write";
@@ -169,9 +146,6 @@ void process(char action, char addr[3], int proc){
 					active->state = 'M';
 					BUS = "RIM";
 					mem[memloc]++;
-					if(memloc%2)
-						active->wrd2 = mem[memloc];
-					else active->wrd1 = mem[memloc];
 				}
 				break;
 			case 'M':
@@ -182,9 +156,6 @@ void process(char action, char addr[3], int proc){
 					BUS = "READ";
 					printf("                                WBr\n");
 					WB++;
-					if(memloc%2)
-						active->wrd2 = mem[memloc];
-					else active->wrd1 = mem[memloc];
 				}
 				else{
 					active->action = "write";
@@ -194,9 +165,6 @@ void process(char action, char addr[3], int proc){
 					printf("                                WBr\n");
 					WB++;
 					mem[memloc]++;
-					if(memloc%2)
-						active->wrd2 = mem[memloc];
-					else active->wrd1 = mem[memloc];
 				}
 				break;
 			default:
@@ -204,7 +172,15 @@ void process(char action, char addr[3], int proc){
 				break;
 
 		}
+	}
 
+	if(memloc%2){
+		active->wrd2 = mem[memloc];
+		active->wrd1 = mem[memloc-1];
+	}
+	else{
+		active->wrd2 = mem[memloc+1];
+		active->wrd1 = mem[memloc];
 	}
 
 
@@ -311,7 +287,6 @@ int main(int argc, char *argv[]){
 
 
 
-	FILE *fp = fopen(argv[argc-1], "r");
 	char line[6];
 	char addr[3];
 	int i;
@@ -330,7 +305,7 @@ int main(int argc, char *argv[]){
 	}
 	BUS = "temp";
 
-	while(fgets(line, sizeof(line), fp)){
+	while(scanf("%s", &line) == 1){
 		//p0->selected
 		if(line[0] == '0'){
 			for(i=0; i<3; i++){

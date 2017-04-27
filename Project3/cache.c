@@ -3,9 +3,9 @@
 #include <stdlib.h>
 
 struct processor{
-	char addr[3], *action;
+	char addr[3], *action, paddr[3];
 	int rhit, whit, rmiss, wmiss, wrd1, wrd2;
-	char state;
+	char state, prev_state;
 	int active;
 };
 
@@ -20,7 +20,7 @@ void state_print(struct processor *p0, struct processor *p1, char* bus){
 	if(p0->state == 'I')
 		printf("           I ----- ---- ----	");
 	else if(p0->active == 1){
-		printf("%-5s %s  %c   %s    %d    %d    ", p0->action, p0->addr, p0->state, p0->addr, p0->wrd1, p0->wrd2);
+		printf("%-5s %s  %c   %s    %d    %d    ", p0->action, p0->paddr, p0->state, p0->addr, p0->wrd1, p0->wrd2);
 	}
 	else{
 		printf("           %c   %s    %d    %d    ", p0->state, p0->addr, p0->wrd1, p0->wrd2);
@@ -33,11 +33,15 @@ void state_print(struct processor *p0, struct processor *p1, char* bus){
 	if(p1->state == 'I')
 		printf("	   	     I ----- ---- ----\n");
 	else if(p1->active == 1){
-		printf("	  %-5s %s  %c   %s    %d    %d\n", p1->action, p1->addr, p1->state, p1->addr, p1->wrd1, p1->wrd2);
+		printf("	  %-5s %s  %c   %s    %d    %d\n", p1->action, p1->paddr, p1->state, p1->addr, p1->wrd1, p1->wrd2);
 	}
 	else{
 		printf("		     %c   %s    %d    %d\n", p1->state, p1->addr, p1->wrd1, p1->wrd2);
 	}
+}
+
+int hextoint(char addr[3]){
+	return (int)strtol(addr, NULL, 16);
 }
 
 void process(char action, char addr[3], int proc){
@@ -53,9 +57,31 @@ void process(char action, char addr[3], int proc){
 		snoop = p0;
 	}
 
+//	if(strstr(BUS, "INV") != NULL && active->state == 'I')
+//		active->state = active->prev_state;
+
+	int hit, i;
+	int loc = hextoint(addr);
+	int memloc = loc/4; //referenced memory index
+	int cur = hextoint(active->addr);
+	//referencing word2
+	if(memloc%2){
+		if(loc-4 == cur)
+			hit = 1;
+		else
+			hit = 0;
+	}
+	//referencing word1
+	else{
+		if(loc == cur)
+			hit = 1;
+		else
+			hit = 0;
+	}
+
 
 	//cache hit
-	if(strcmp(active->addr, addr) == 0){
+	if(hit){
 
 		switch(active->state){
 			case 'S':
@@ -64,12 +90,19 @@ void process(char action, char addr[3], int proc){
 					active->rhit++;
 					active->state = 'S';
 					BUS = "(none)";
+					if(memloc%2)
+						active->wrd2 = mem[memloc];
+					else active->wrd1 = mem[memloc];
 				}
 				else{
 					active->action = "write";
 					active->whit++;
 					active->state = 'M';
 					BUS = "INV";
+					mem[memloc]++;
+					if(memloc%2)
+						active->wrd2 = mem[memloc];
+					else active->wrd1 = mem[memloc];
 				}
 				break;
 			case 'M':
@@ -78,16 +111,22 @@ void process(char action, char addr[3], int proc){
 					active->rhit++;
 					active->state = 'M';
 					BUS = "(none)";
+					if(memloc%2)
+						active->wrd2 = mem[memloc];
+					else active->wrd1 = mem[memloc];
 				}
 				else{
 					active->action = "write";
 					active->whit++;
 					active->state = 'M';
 					BUS = "(none)";
+					mem[memloc]++;
+					if(memloc%2)
+						active->wrd2 = mem[memloc];
+					else active->wrd1 = mem[memloc];
 				}
 				break;
 			default:
-				printf("hit default\n");
 				break;
 		}
 	}
@@ -99,12 +138,19 @@ void process(char action, char addr[3], int proc){
 					active->rmiss++;
 					active->state = 'S';
 					BUS = "READ";
+					if(memloc%2)
+						active->wrd2 = mem[memloc];
+					else active->wrd1 = mem[memloc];
 				}
 				else{
 					active->action = "write";
 					active->wmiss++;
 					active->state = 'M';
 					BUS = "RIM";
+					mem[memloc]++;
+					if(memloc%2)
+						active->wrd2 = mem[memloc];
+					else active->wrd1 = mem[memloc];
 				}
 				break;
 			case 'S':
@@ -113,12 +159,19 @@ void process(char action, char addr[3], int proc){
 					active->rmiss++;
 					active->state = 'S';
 					BUS = "READ";
+					if(memloc%2)
+						active->wrd2 = mem[memloc];
+					else active->wrd1 = mem[memloc];
 				}
 				else{
 					active->action = "write";
 					active->wmiss++;
 					active->state = 'M';
 					BUS = "RIM";
+					mem[memloc]++;
+					if(memloc%2)
+						active->wrd2 = mem[memloc];
+					else active->wrd1 = mem[memloc];
 				}
 				break;
 			case 'M':
@@ -129,6 +182,9 @@ void process(char action, char addr[3], int proc){
 					BUS = "READ";
 					printf("                                WBr\n");
 					WB++;
+					if(memloc%2)
+						active->wrd2 = mem[memloc];
+					else active->wrd1 = mem[memloc];
 				}
 				else{
 					active->action = "write";
@@ -137,6 +193,10 @@ void process(char action, char addr[3], int proc){
 					BUS = "RIM";
 					printf("                                WBr\n");
 					WB++;
+					mem[memloc]++;
+					if(memloc%2)
+						active->wrd2 = mem[memloc];
+					else active->wrd1 = mem[memloc];
 				}
 				break;
 			default:
@@ -148,15 +208,38 @@ void process(char action, char addr[3], int proc){
 	}
 
 
-	if(strcmp(snoop->addr, addr) == 0){
+	cur = hextoint(snoop->addr);
+	//referencing word2
+	if(memloc%2){
+		if(loc-4 == cur)
+			hit = 1;
+		else
+			hit = 0;
+	}
+	//referencing word1
+	else{
+		if(loc == cur)
+			hit = 1;
+		else
+			hit = 0;
+	}
+	//check snooping cache
+	if(hit){
 		switch(snoop->state){
 			case 'S':
 				switch(BUS[1]){
 					case 'I':
+						snoop->prev_state = 'S';
 						snoop->state = 'I';
+						for(i=0;i<3;i++)
+							snoop->addr[i] = 'f';
+
 						break;
 					case 'N':
+						snoop->prev_state = 'S';
 						snoop->state = 'I';
+						for(i=0;i<3;i++)
+							snoop->addr[i] = 'f';
 						break;
 					case 'E':
 						snoop->state = 'S';
@@ -171,6 +254,8 @@ void process(char action, char addr[3], int proc){
 						break;
 					case 'I':
 						snoop->state = 'I';
+						for(i=0;i<3;i++)
+							snoop->addr[i] = 'f';
 						BUS = "RIM/WB";
 						break;
 				}
@@ -178,7 +263,16 @@ void process(char action, char addr[3], int proc){
 		}
 	}
 
-	strcpy(active->addr, addr);
+	if(active->state != 'I'){
+		if(memloc%2){
+			sprintf(active->addr, "%x", loc-4);	
+		}
+		else{
+			strcpy(active->addr, addr);
+		}
+		strcpy(active->paddr, addr);
+	}
+
 	if(proc == 0){
 		p0 = active;
 		p0->active = 1;
@@ -226,9 +320,15 @@ int main(int argc, char *argv[]){
 	p1 = malloc(sizeof(struct processor));
 
 	p0->state = p1->state = 'I';
+	p0->prev_state = p1->prev_state = 'I';
 	p0->action = p1->action = "";
 	p0->rhit = p0->whit = p1->rhit = p1->whit = p0->rmiss = p1->rmiss = p0->wmiss = p1->wmiss = 0;
 	p0->active = p1->active = 0;
+	for(i=0; i<3; i++){
+		p0->addr[i] = 'f';
+		p1->addr[i] = 'f';
+	}
+	BUS = "temp";
 
 	while(fgets(line, sizeof(line), fp)){
 		//p0->selected
